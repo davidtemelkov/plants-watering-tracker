@@ -22,9 +22,9 @@ function App() {
 
   useEffect(() => {
     AWS.config.update({
-      region: import.meta.env.VITE_AWS_REGION,
-      accessKeyId: import.meta.env.VITE_AWS_ACCESS_KEY,
-      secretAccessKey: import.meta.env.VITE_AWS_SECRET_KEY,
+      region: process.env.VITE_AWS_REGION,
+      accessKeyId: process.env.VITE_AWS_ACCESS_KEY,
+      secretAccessKey: process.env.VITE_AWS_SECRET_KEY,
     });
 
     const dynamoDB = new AWS.DynamoDB.DocumentClient();
