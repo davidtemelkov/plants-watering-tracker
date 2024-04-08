@@ -33,6 +33,8 @@ function App() {
     },
   });
 
+  //TODO: create IAM role
+
   useEffect(() => {
     const params = {
       TableName: "plants",
