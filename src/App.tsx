@@ -276,8 +276,6 @@ function App() {
   };
 
   const handleSubmit = () => {
-    const today = new Date().toISOString().split("T")[0];
-
     const params = {
       TableName: "plants",
       Item: {
