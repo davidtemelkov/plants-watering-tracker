@@ -23,22 +23,17 @@ function App() {
   const [newRepotted, setNewRepotted] = useState<Date | null>(null);
   const [newFertilized, setNewFertilized] = useState<Date | null>(null);
   const [newImageURL, setNewImageURL] = useState("");
-  const [dynamoDBClient, setDynamoDBClient] = useState<DynamoDBClient | null>(
-    null
-  );
   const modalRef = useRef<HTMLDivElement>(null);
 
+  const dynamoDBClient = new DynamoDBClient({
+    region: import.meta.env.AWS_REGION!,
+    credentials: {
+      accessKeyId: import.meta.env.AWS_ACCESS_KEY_ID!,
+      secretAccessKey: import.meta.env.AWS_SECRET_ACCESS_KEY!,
+    },
+  });
+
   useEffect(() => {
-    const dynamo = new DynamoDBClient({
-      region: process.env.AWS_REGION!,
-      credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-      },
-    });
-
-    setDynamoDBClient(dynamo);
-
     const params = {
       TableName: "plants",
     };
