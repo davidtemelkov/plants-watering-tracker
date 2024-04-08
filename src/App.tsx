@@ -6,6 +6,8 @@ import {
   UpdateItemCommand,
   ScanCommand,
 } from "@aws-sdk/client-dynamodb";
+import { storage } from "./firebase";
+import { ref, getDownloadURL, uploadBytes } from "firebase/storage";
 
 interface Plant {
   Name: string;
@@ -22,7 +24,9 @@ function App() {
   const [newWatered, setNewWatered] = useState<Date | null>(null);
   const [newRepotted, setNewRepotted] = useState<Date | null>(null);
   const [newFertilized, setNewFertilized] = useState<Date | null>(null);
-  const [newImageURL, setNewImageURL] = useState("");
+  const [newImageFile, setNewImageFile] = useState<File | null>(null);
+  const [rerender, setRerender] = useState(false);
+
   const modalRef = useRef<HTMLDivElement>(null);
 
   const dynamoDBClient = new DynamoDBClient({
@@ -72,7 +76,7 @@ function App() {
     return () => {
       document.removeEventListener("mousedown", handleOutsideClick);
     };
-  }, []);
+  }, [rerender]);
 
   const renderPlants = () => {
     const handleWaterButtonClick = (plant: Plant) => {
@@ -270,7 +274,27 @@ function App() {
     setNewFertilized(null);
   };
 
-  const handleSubmit = () => {
+  const uploadImageToFirebaseStorage = async () => {
+    try {
+      if (!newImageFile) {
+        console.error("no image selected");
+        return null;
+      }
+
+      const storageRef = ref(storage, `plants/${newImageFile.name}`);
+      await uploadBytes(storageRef, newImageFile);
+      return getDownloadURL(storageRef);
+    } catch (error) {
+      console.error("Error uploading image to Firebase Storage:", error);
+      return null;
+    }
+  };
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const imageUrl = await uploadImageToFirebaseStorage();
+
     const params = {
       TableName: "plants",
       Item: {
@@ -278,7 +302,7 @@ function App() {
         Watered: { S: parseDateToFormat(newWatered) },
         Repotted: { S: parseDateToFormat(newRepotted) },
         Fertilized: { S: parseDateToFormat(newFertilized) },
-        ImageURL: { S: newImageURL },
+        ImageURL: { S: imageUrl! },
       },
     };
 
@@ -287,6 +311,7 @@ function App() {
       .then(() => {
         console.log("PutItem succeeded");
         closeModal();
+        setRerender(!rerender);
       })
       .catch((error) => {
         console.error("Unable to add item. Error:", error);
@@ -376,11 +401,10 @@ function App() {
                 />
               </label>
               <label className="block mb-4">
-                Image URL:
+                Image:
                 <input
-                  type="text"
-                  value={newImageURL}
-                  onChange={(e) => setNewImageURL(e.target.value)}
+                  type="file"
+                  onChange={(e) => setNewImageFile(e.target.files![0])}
                   className="block w-full border border-gray-300 rounded-md p-2 bg-white text-black"
                 />
               </label>
