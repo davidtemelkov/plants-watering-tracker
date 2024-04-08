@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import "./App.css";
-import AWS from "aws-sdk";
+import { DynamoDB } from "aws-sdk";
 
 interface Plant {
   Name: string;
@@ -21,13 +21,7 @@ function App() {
   const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    AWS.config.update({
-      region: process.env.VITE_AWS_REGION,
-      accessKeyId: process.env.VITE_AWS_ACCESS_KEY,
-      secretAccessKey: process.env.VITE_AWS_SECRET_KEY,
-    });
-
-    const dynamoDB = new AWS.DynamoDB.DocumentClient();
+    const dynamoDB = new DynamoDB.DocumentClient();
 
     const params: AWS.DynamoDB.DocumentClient.ScanInput = {
       TableName: "plants",
@@ -63,7 +57,7 @@ function App() {
 
   const renderPlants = () => {
     const handleWaterButtonClick = (plant: Plant) => {
-      const dynamoDB = new AWS.DynamoDB.DocumentClient();
+      const dynamoDB = new DynamoDB.DocumentClient();
 
       const today = new Date().toISOString().split("T")[0];
 
@@ -96,7 +90,7 @@ function App() {
     };
 
     const handleRepotButtonClick = (plant: Plant) => {
-      const dynamoDB = new AWS.DynamoDB.DocumentClient();
+      const dynamoDB = new DynamoDB.DocumentClient();
 
       const today = new Date().toISOString().split("T")[0];
 
@@ -129,7 +123,7 @@ function App() {
     };
 
     const handleFertilizeButtonClick = (plant: Plant) => {
-      const dynamoDB = new AWS.DynamoDB.DocumentClient();
+      const dynamoDB = new DynamoDB.DocumentClient();
 
       const today = new Date().toISOString().split("T")[0];
 
@@ -264,7 +258,7 @@ function App() {
   };
 
   const handleSubmit = () => {
-    const dynamoDB = new AWS.DynamoDB.DocumentClient(); // Use DocumentClient
+    const dynamoDB = new DynamoDB.DocumentClient(); // Use DocumentClient
 
     const params = {
       TableName: "plants",
