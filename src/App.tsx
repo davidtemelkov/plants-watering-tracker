@@ -1,6 +1,11 @@
 import { useEffect, useState, useRef } from "react";
 import "./App.css";
-import { DynamoDB } from "aws-sdk";
+import {
+  DynamoDBClient,
+  PutItemCommand,
+  UpdateItemCommand,
+  ScanCommand,
+} from "@aws-sdk/client-dynamodb";
 
 interface Plant {
   Name: string;
@@ -18,24 +23,43 @@ function App() {
   const [newRepotted, setNewRepotted] = useState<Date | null>(null);
   const [newFertilized, setNewFertilized] = useState<Date | null>(null);
   const [newImageURL, setNewImageURL] = useState("");
+  const [dynamoDBClient, setDynamoDBClient] = useState<DynamoDBClient | null>(
+    null
+  );
   const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const dynamoDB = new DynamoDB.DocumentClient();
+    const dynamo = new DynamoDBClient({
+      region: process.env.AWS_REGION!,
+      credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+      },
+    });
 
-    const params: AWS.DynamoDB.DocumentClient.ScanInput = {
+    setDynamoDBClient(dynamo);
+
+    const params = {
       TableName: "plants",
     };
 
-    dynamoDB.scan(params, (err, data) => {
-      if (err) {
-        console.error("Unable to scan items. Error:", err);
-      } else {
+    dynamoDBClient!
+      .send(new ScanCommand(params))
+      .then((data) => {
         if (data.Items) {
-          setPlants(data.Items as Plant[]);
+          const plantItems: Plant[] = data.Items.map((item) => ({
+            Name: item.Name.S || "",
+            ImageURL: item.ImageURL.S || "",
+            Watered: item.Watered.S || "",
+            Repotted: item.Repotted.S || "",
+            Fertilized: item.Fertilized.S || "",
+          }));
+          setPlants(plantItems);
         }
-      }
-    });
+      })
+      .catch((error) => {
+        console.error("Unable to scan items. Error:", error);
+      });
 
     // Add event listener to handle clicks outside the modal
     const handleOutsideClick = (event: MouseEvent) => {
@@ -57,26 +81,22 @@ function App() {
 
   const renderPlants = () => {
     const handleWaterButtonClick = (plant: Plant) => {
-      const dynamoDB = new DynamoDB.DocumentClient();
-
       const today = new Date().toISOString().split("T")[0];
 
       const params = {
         TableName: "plants",
         Key: {
-          Name: plant.Name, // Assuming Name is the primary key
+          Name: { S: plant.Name }, // Assuming Name is the primary key
         },
         UpdateExpression: "SET Watered = :watered",
         ExpressionAttributeValues: {
-          ":watered": today,
+          ":watered": { S: today },
         },
       };
 
-      dynamoDB.update(params, (err, data) => {
-        if (err) {
-          console.error("Unable to update item. Error:", err);
-        } else {
-          console.log("UpdateItem succeeded:", data);
+      dynamoDBClient!
+        .send(new UpdateItemCommand(params))
+        .then(() => {
           // Refresh the plants list after updating
           const updatedPlants = plants.map((p) => {
             if (p.Name === plant.Name) {
@@ -85,31 +105,29 @@ function App() {
             return p;
           });
           setPlants(updatedPlants);
-        }
-      });
+        })
+        .catch((error) => {
+          console.error("Unable to update item. Error:", error);
+        });
     };
 
     const handleRepotButtonClick = (plant: Plant) => {
-      const dynamoDB = new DynamoDB.DocumentClient();
-
       const today = new Date().toISOString().split("T")[0];
 
       const params = {
         TableName: "plants",
         Key: {
-          Name: plant.Name, // Assuming Name is the primary key
+          Name: { S: plant.Name }, // Assuming Name is the primary key
         },
         UpdateExpression: "SET Repotted = :repotted",
         ExpressionAttributeValues: {
-          ":repotted": today,
+          ":repotted": { S: today },
         },
       };
 
-      dynamoDB.update(params, (err, data) => {
-        if (err) {
-          console.error("Unable to update item. Error:", err);
-        } else {
-          console.log("UpdateItem succeeded:", data);
+      dynamoDBClient!
+        .send(new UpdateItemCommand(params))
+        .then(() => {
           // Refresh the plants list after updating
           const updatedPlants = plants.map((p) => {
             if (p.Name === plant.Name) {
@@ -118,31 +136,29 @@ function App() {
             return p;
           });
           setPlants(updatedPlants);
-        }
-      });
+        })
+        .catch((error) => {
+          console.error("Unable to update item. Error:", error);
+        });
     };
 
     const handleFertilizeButtonClick = (plant: Plant) => {
-      const dynamoDB = new DynamoDB.DocumentClient();
-
       const today = new Date().toISOString().split("T")[0];
 
       const params = {
         TableName: "plants",
         Key: {
-          Name: plant.Name, // Assuming Name is the primary key
+          Name: { S: plant.Name }, // Assuming Name is the primary key
         },
         UpdateExpression: "SET Fertilized = :fertilized",
         ExpressionAttributeValues: {
-          ":fertilized": today,
+          ":fertilized": { S: today },
         },
       };
 
-      dynamoDB.update(params, (err, data) => {
-        if (err) {
-          console.error("Unable to update item. Error:", err);
-        } else {
-          console.log("UpdateItem succeeded:", data);
+      dynamoDBClient!
+        .send(new UpdateItemCommand(params))
+        .then(() => {
           // Refresh the plants list after updating
           const updatedPlants = plants.map((p) => {
             if (p.Name === plant.Name) {
@@ -151,8 +167,10 @@ function App() {
             return p;
           });
           setPlants(updatedPlants);
-        }
-      });
+        })
+        .catch((error) => {
+          console.error("Unable to update item. Error:", error);
+        });
     };
 
     return (
@@ -258,28 +276,28 @@ function App() {
   };
 
   const handleSubmit = () => {
-    const dynamoDB = new DynamoDB.DocumentClient(); // Use DocumentClient
+    const today = new Date().toISOString().split("T")[0];
 
     const params = {
       TableName: "plants",
       Item: {
-        Name: newPlantName,
-        Watered: parseDateToFormat(newWatered),
-        Repotted: parseDateToFormat(newRepotted),
-        Fertilized: parseDateToFormat(newFertilized),
-        ImageURL: newImageURL,
+        Name: { S: newPlantName },
+        Watered: { S: parseDateToFormat(newWatered) },
+        Repotted: { S: parseDateToFormat(newRepotted) },
+        Fertilized: { S: parseDateToFormat(newFertilized) },
+        ImageURL: { S: newImageURL },
       },
     };
 
-    dynamoDB.put(params, (err, data) => {
-      // Use put method
-      if (err) {
-        console.error("Unable to add item. Error:", err);
-      } else {
-        console.log("PutItem succeeded:", data);
+    dynamoDBClient!
+      .send(new PutItemCommand(params))
+      .then(() => {
+        console.log("PutItem succeeded");
         closeModal();
-      }
-    });
+      })
+      .catch((error) => {
+        console.error("Unable to add item. Error:", error);
+      });
   };
 
   return (
