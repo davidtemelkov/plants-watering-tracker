@@ -37,6 +37,18 @@ function App() {
     },
   });
 
+  const parseDateToFormat = (date: Date | null): string => {
+    if (!date) return "";
+    const day = date.getDate().toString().padStart(2, "0");
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
+    const year = date.getFullYear().toString();
+    const hours = date.getHours().toString().padStart(2, "0");
+    const minutes = date.getMinutes().toString().padStart(2, "0");
+    return `${day}.${month}.${year}T${hours}:${minutes}`;
+  };
+
+  const today = parseDateToFormat(new Date());
+
   useEffect(() => {
     const params = {
       TableName: "plants",
@@ -53,6 +65,12 @@ function App() {
             Repotted: item.Repotted.S || "",
             Fertilized: item.Fertilized.S || "",
           }));
+
+          plantItems.sort(
+            (a, b) =>
+              parseDate(a.Watered).getTime() - parseDate(b.Watered).getTime()
+          );
+
           setPlants(plantItems);
         }
       })
@@ -80,12 +98,10 @@ function App() {
 
   const renderPlants = () => {
     const handleWaterButtonClick = (plant: Plant) => {
-      const today = new Date().toISOString().split("T")[0];
-
       const params = {
         TableName: "plants",
         Key: {
-          Name: { S: plant.Name }, // Assuming Name is the primary key
+          Name: { S: plant.Name },
         },
         UpdateExpression: "SET Watered = :watered",
         ExpressionAttributeValues: {
@@ -111,8 +127,6 @@ function App() {
     };
 
     const handleRepotButtonClick = (plant: Plant) => {
-      const today = new Date().toISOString().split("T")[0];
-
       const params = {
         TableName: "plants",
         Key: {
@@ -142,8 +156,6 @@ function App() {
     };
 
     const handleFertilizeButtonClick = (plant: Plant) => {
-      const today = new Date().toISOString().split("T")[0];
-
       const params = {
         TableName: "plants",
         Key: {
@@ -250,16 +262,6 @@ function App() {
     } catch (error) {
       return new Date(); // Return current date as fallback
     }
-  };
-
-  const parseDateToFormat = (date: Date | null): string => {
-    if (!date) return "";
-    const day = date.getDate().toString().padStart(2, "0");
-    const month = (date.getMonth() + 1).toString().padStart(2, "0");
-    const year = date.getFullYear().toString();
-    const hours = date.getHours().toString().padStart(2, "0");
-    const minutes = date.getMinutes().toString().padStart(2, "0");
-    return `${day}.${month}.${year}T${hours}:${minutes}`;
   };
 
   const openModal = () => {
